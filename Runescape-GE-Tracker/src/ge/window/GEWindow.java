@@ -12,7 +12,7 @@ public class GEWindow {
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setResizable(false);
  
-        //Create the menu bar.  Make it have a green background.
+        // Menu Bar
         JMenuBar greenMenuBar = new JMenuBar();
         greenMenuBar.setOpaque(true);
         greenMenuBar.setBackground(new Color(154, 165, 127));
