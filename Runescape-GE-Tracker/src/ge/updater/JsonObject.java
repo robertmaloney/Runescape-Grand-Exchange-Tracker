@@ -20,7 +20,7 @@ public class JsonObject {
 		final int MODE_STRING = 0, MODE_INT = 1, MODE_ARR = 2, MODE_SKIP = -1;
 		HashMap<String,Object> shell = new HashMap<String,Object>();
 		ArrayList<Object> list = null;
-		boolean idmode = true;
+		boolean idmode = true, ignorecommas = false;
 		int mode = MODE_STRING;
 		String idbuf = "";
 		Object valbuf = null;
@@ -30,27 +30,41 @@ public class JsonObject {
 			case ':':
 				idmode = false;
 				break;
+			case '}':
 			case ',':
 				//idbuf = idbuf.substring(idbuf.indexOf("\"")+1,idbuf.lastIndexOf("\""));
-				//Need to strip quotes off of value strings
-				if (mode == MODE_STRING)
-					shell.put(idbuf,valbuf);
-				else if (mode == MODE_INT) {
-					shell.put(idbuf,valbuf);
-				} else if (mode == MODE_ARR) {
-					list.add(valbuf);
+				if (ignorecommas) {
+					if (valbuf == null)
+						valbuf = "" + syntax.charAt(i);
+					else
+						valbuf = valbuf.toString() + syntax.charAt(i);
+				} else {
+					//Need to strip quotes off of value strings
+					if (mode == MODE_STRING) {
+						shell.put(idbuf,valbuf);
+						idbuf = "";
+					} else if (mode == MODE_INT) {
+						shell.put(idbuf,valbuf);
+						idbuf = "";
+					} else if (mode == MODE_ARR) {
+						System.out.println("Adding element to array.");
+						list.add(valbuf);
+					} else {
+						mode = MODE_STRING;
+					}
+					valbuf = null;
+					idmode = true;
 				}
-				idbuf = "";
-				valbuf = null;
-				idmode = true;
-				mode = MODE_STRING;
 				break;
 			case '[':
 				mode = MODE_ARR;
 				list = new ArrayList<Object>();
+				System.out.println("Starting array " + idbuf);
 				break;
 			case ']':
 				mode = MODE_SKIP;
+				System.out.println("Adding array " + idbuf);
+				list.add(valbuf);
 				shell.put(idbuf, list);
 				break;
 			case '{':
@@ -66,16 +80,32 @@ public class JsonObject {
 						break;
 				}
 				i = Math.min(i + newi + 1, syntax.length());
-				valbuf = parseSyntax(newsyntax.substring(0,newi));
+				System.out.println("Recursing...");
+				valbuf = parseSyntax(newsyntax.substring(0,newi+1));
+				System.out.println("Out of recursion.");
+				break;
+			case '\"':
+				if (!idmode)
+					ignorecommas = !ignorecommas;
+				break;
+			case '\n':
 				break;
 			case ' ':
-			case '\n':
+				if (ignorecommas) {
+					if (valbuf == null)
+						valbuf = "" + syntax.charAt(i);
+					else
+						valbuf = valbuf.toString() + syntax.charAt(i);
+				}
 				break;
 			default:
 				if (idmode)
 					idbuf += syntax.charAt(i);
 				else
-					valbuf = (String) valbuf + syntax.charAt(i);
+					if (valbuf == null)
+						valbuf = "" + syntax.charAt(i);
+					else
+						valbuf = valbuf.toString() + syntax.charAt(i);
 				break;
 			}
 		}
