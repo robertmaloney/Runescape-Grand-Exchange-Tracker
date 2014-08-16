@@ -1,16 +1,19 @@
 package ge.updater;
 
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.Date;
 import java.net.*;
 import java.io.*;
 
 public class ItemUpdater {
 	
-	private HashMap<String,Integer> items;
+	private LinkedHashMap<String,Integer> items;
 	
 	public ItemUpdater() {
-		items = new HashMap<String,Integer>();
+		items = new LinkedHashMap<String,Integer>();
 	}
 	
 	public void update()  throws Exception {
@@ -29,16 +32,25 @@ public class ItemUpdater {
 		page2.put("names", new String[]{"item1", "item2", "item3", "item4", "item5"});
 		System.out.println(page2);
 		*/
+		long start = (new Date()).getTime();
 		for (int i = 0; i < 38; ++i) {
+			System.out.println("Category: "+i);
 			int counts[] = grabAlphaCounts(i);
 			for (int j = 0; j < counts.length; ++j) {
+				//System.out.println(((j == 0) ? "%23" : "" + (char) ('a' + j - 1)) + ": " + counts[j]);
 				int page = 1;
 				while (counts[j] > 0) {
-					String alpha = (j == 0) ? "%23" : "" + (char) ('a' + j - 1);
-					URL alphas = new URL("http://services.runescape.com/m=itemdb_rs/api/catalogue/items.json?category=" + i + "&alpha=" + alpha + "&page=" + page);
-					URLConnection conn = alphas.openConnection();
-					BufferedReader in = new BufferedReader( new InputStreamReader( conn.getInputStream() ) );
-					JsonObject json = new JsonObject(in.readLine());
+					String jstring = null;
+					while (jstring == null) {
+						String alpha = (j == 0) ? "%23" : "" + (char) ('a' + j - 1);
+						URL alphas = new URL("http://services.runescape.com/m=itemdb_rs/api/catalogue/items.json?category=" + i + "&alpha=" + alpha + "&page=" + page);
+						URLConnection conn = alphas.openConnection();
+						BufferedReader in = new BufferedReader( new InputStreamReader( conn.getInputStream() ) );
+						jstring = in.readLine();
+						System.out.println(alpha +": " + jstring);
+						Thread.sleep(2500);
+					}
+					JsonObject json = new JsonObject(jstring);
 					//System.out.println("\n" + json.toString());
 					ArrayList<JsonObject> items = (ArrayList<JsonObject>) json.get("items");
 					//System.out.println(items.size());
@@ -50,14 +62,50 @@ public class ItemUpdater {
 					}
 					counts[j] -= items.size();
 					++page;
-					Thread.sleep(1000);
 				}
 			}
 		}
+		double time = ((double) (new Date()).getTime() - start) / 60000;
+		System.out.printf("Updating items took %1$.2f minutes.\n", time);
 	}
 	
 	public String toString() {
 		return items.toString();
+	}
+	
+	public void save (String path) {
+		try {
+			BufferedReader br = new BufferedReader( new InputStreamReader( new FileInputStream( path )));
+			BufferedWriter bw = new BufferedWriter( new OutputStreamWriter( new FileOutputStream( path +".bak" )));
+			String line;
+			while ((line = br.readLine()) != null) bw.write(line + "\n");
+			br.close();
+			bw.close();
+		} catch (Exception e) {
+			// Do Nothing
+		}
+		try {
+			BufferedWriter bw = new BufferedWriter( new OutputStreamWriter( new FileOutputStream( path )));
+			bw.write("{");
+			Iterator<Map.Entry<String,Integer>> kv = items.entrySet().iterator();
+			while (kv.hasNext()) {
+				Map.Entry<String,Integer> ent = kv.next();
+				bw.write("\"" + ent.getKey() +"\":");
+				bw.write(ent.getValue().toString());
+				if (kv.hasNext()) bw.write(",\n");
+			}
+			/*
+			for (i = 0; i < itemnames.size(); ++i) {
+				bw.write("\"" + itemnames.get(i) +"\":");
+				bw.write(itemids.get(i).toString());
+				if (i != itemnames.size() - 1) bw.write(",\n");
+			}
+			*/
+			bw.write("}");
+			bw.close();
+		} catch (Exception e) {
+			// Error Messages
+		}
 	}
 	
 	public int size() {
@@ -65,15 +113,19 @@ public class ItemUpdater {
 	}
 	
 	private int[] grabAlphaCounts(int category) throws Exception {
-		URL alphas = new URL("http://services.runescape.com/m=itemdb_rs/api/catalogue/category.json?category=" + category);
-		URLConnection conn = alphas.openConnection();
-		BufferedReader in = new BufferedReader( new InputStreamReader( conn.getInputStream() ) );
-		String jstring = in.readLine();
+		String jstring = null;
+		while (jstring == null) {
+			URL alphas = new URL("http://services.runescape.com/m=itemdb_rs/api/catalogue/category.json?category=" + category);
+			URLConnection conn = alphas.openConnection();
+			BufferedReader in = new BufferedReader( new InputStreamReader( conn.getInputStream() ) );
+			jstring = in.readLine();
+			Thread.sleep(2500);
+		}
 		//System.out.println(jstring+"\n");
 		JsonObject json = new JsonObject(jstring);
 		//System.out.println(json.toString());
 		int counts[] = new int[27];
-		for (int i = 0; i < 26; ++i)
+		for (int i = 0; i < 27; ++i)
 			counts[i] = (int) ((ArrayList<JsonObject>) json.get("alpha")).get(i).get("items");
 		return counts;
 	}
@@ -81,8 +133,9 @@ public class ItemUpdater {
 	public static void main (String [] args) throws Exception {
 		ItemUpdater iu = new ItemUpdater();
 		iu.update();
-		System.out.println(iu.toString());
-		System.out.println(iu.size());
+		//System.out.println(iu.toString());
+		iu.save("items.json");
+		System.out.println("Size: " + iu.size());
 	}
 	
 	

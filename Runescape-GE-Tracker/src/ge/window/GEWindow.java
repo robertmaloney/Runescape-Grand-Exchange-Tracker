@@ -1,5 +1,6 @@
 package ge.window;
 
+import ge.updater.*;
 import java.awt.*;
 import java.awt.event.*;
 import javax.swing.*;
