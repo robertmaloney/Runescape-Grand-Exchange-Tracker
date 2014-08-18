@@ -47,6 +47,7 @@ public class ItemUpdater {
 						URLConnection conn = alphas.openConnection();
 						BufferedReader in = new BufferedReader( new InputStreamReader( conn.getInputStream() ) );
 						jstring = in.readLine();
+						in.close();
 						System.out.println(alpha +": " + jstring);
 						Thread.sleep(2500);
 					}
@@ -58,7 +59,7 @@ public class ItemUpdater {
 						//System.out.println(items.get(k).toString());
 						String name = (String) items.get(k).get("name");
 						int id = (int) items.get(k).get("id");
-						this.items.put(name, id);
+						this.items.put(name.toLowerCase(), id);
 					}
 					counts[j] -= items.size();
 					++page;
@@ -132,11 +133,33 @@ public class ItemUpdater {
 	
 	public static void main (String [] args) throws Exception {
 		ItemUpdater iu = new ItemUpdater();
-		iu.update();
+		//iu.update();
 		//System.out.println(iu.toString());
-		iu.save("items.json");
-		System.out.println("Size: " + iu.size());
+		//iu.save("items.json");
+		//System.out.println("Size: " + iu.size());
 	}
 	
+	// Legacy code
+	/*
+	public static void filterKeys(String path) {
+		try {
+			BufferedReader br = new BufferedReader( new InputStreamReader( new FileInputStream( path )));
+			String line, jstring = "{";
+			while ((line = br.readLine()) != null) {
+				String p1 = line.substring(line.indexOf("\"")+1,line.lastIndexOf("\""));
+				String p2 = line.substring(line.lastIndexOf("\""));
+				System.out.println(p1+p2);
+				jstring += "\"" + p1.toLowerCase() + p2 + "\n";
+			}
+			jstring = jstring.substring(0,jstring.length() - 1);
+			br.close();
+			BufferedWriter bw = new BufferedWriter( new OutputStreamWriter( new FileOutputStream( "lowercase_" + path )));
+			bw.write(jstring);
+			bw.close();
+		} catch (Exception e) {
+			
+		}
+	}
+	*/
 	
 }

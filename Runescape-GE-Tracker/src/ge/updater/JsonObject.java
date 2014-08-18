@@ -3,7 +3,7 @@ package ge.updater;
 import java.util.ArrayList;
 import java.util.Iterator;
 
-public class JsonObject extends java.util.HashMap<String, Object> {
+public class JsonObject extends java.util.TreeMap<String, Object> {
 	
 	public JsonObject () {}
 	
@@ -66,16 +66,19 @@ public class JsonObject extends java.util.HashMap<String, Object> {
 				break;
 				
 			// Write the buffers into the HashMap and clear them
-			case '}':
 			case ',':
 				if (debug) System.out.println("Adding " + idbuf + ": " + valbuf + ", mode " + mode);
 				
 				// Add commas to valbuf if they are unimportant
 				if (ignorecommas) {
-					if (valbuf == null)
-						valbuf = "" + syntax.charAt(i);
-					else
-						valbuf = valbuf.toString() + syntax.charAt(i);
+					if (idmode) {
+						idbuf += ',';
+					} else {
+						if (valbuf == null)
+							valbuf = "" + syntax.charAt(i);
+						else
+							valbuf = valbuf.toString() + ',';
+					}
 				} else {
 					// Strings are saved directly, numbers are parsed
 					if (mode == MODE_STRING) {
@@ -136,17 +139,15 @@ public class JsonObject extends java.util.HashMap<String, Object> {
 				if (debug) System.out.println("Recursing...");
 				
 				// Parse child
-				valbuf = new JsonObject(newsyntax.substring(0,newi+2));
+				valbuf = new JsonObject(newsyntax.substring(0,newi+1));
 				
 				if (debug) System.out.println("Out of recursion.");
 				break;
 				
 			// Switch to MODE_STRING and turn off/on ignoring commas
 			case '\"':
-				if (!idmode) {
-					ignorecommas = !ignorecommas;
-					mode = MODE_STRING;
-				}
+				ignorecommas = !ignorecommas;
+				mode = MODE_STRING;
 				break;
 			case '\n':
 				break;
@@ -154,10 +155,14 @@ public class JsonObject extends java.util.HashMap<String, Object> {
 			// We only care about spaces when they are in a String
 			case ' ':
 				if (ignorecommas) {
-					if (valbuf == null)
-						valbuf = "" + syntax.charAt(i);
-					else
-						valbuf = valbuf.toString() + syntax.charAt(i);
+					if (idmode) {
+						idbuf += ' ';
+					} else {
+						if (valbuf == null)
+							valbuf = "" + syntax.charAt(i);
+						else
+							valbuf = valbuf.toString() + ' ';
+					}
 				}
 				break;
 				
@@ -171,6 +176,13 @@ public class JsonObject extends java.util.HashMap<String, Object> {
 					else
 						valbuf = valbuf.toString() + syntax.charAt(i);
 				break;
+			}
+		}
+		if (!idbuf.isEmpty()) {
+			if (mode == MODE_STRING) {
+				this.put(idbuf,valbuf);
+			} else if (mode == MODE_INT) {
+				this.put(idbuf,Integer.parseInt((String)valbuf));
 			}
 		}
 	}
