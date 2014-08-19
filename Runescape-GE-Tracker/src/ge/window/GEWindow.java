@@ -26,6 +26,17 @@ public class GEWindow extends JFrame {
 	ArrayList<GEGraphData> graphdata;
 	
 	private void createAndShowGUI() {
+		JFrame prepFrame = new JFrame();
+		JPanel prepPanel = new JPanel();
+		JLabel preptext = new JLabel("Grabbing Grand Exchange Data...");
+		preptext.setOpaque(true);
+		preptext.setPreferredSize(new Dimension(250, 100));
+		prepPanel.add(preptext, BorderLayout.CENTER);
+		prepFrame.add(prepPanel, BorderLayout.CENTER);
+		prepFrame.pack();
+		prepFrame.setLocation(1920/2 - prepFrame.getSize().width/2, 1080/2 - prepFrame.getSize().height/2);
+		prepFrame.setVisible(true);
+		
 		graphdata = new ArrayList<GEGraphData>();
         //Create and set up the window.
         this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -143,8 +154,12 @@ public class GEWindow extends JFrame {
         // Grab graph data for current items
         for (int i = 0; i < items.size(); ++i)
         	grabGraph((int) allitems.get(items.getElementAt(i)));
+        
         //Display the window
+        prepFrame.setVisible(false);
+        prepFrame.dispose();
         this.pack();
+		this.setLocation(1920/2 - this.getSize().width/2, 1080/2 - this.getSize().height/2);
         this.setVisible(true);
     }
 	
