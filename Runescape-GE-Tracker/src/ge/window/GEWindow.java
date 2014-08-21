@@ -26,16 +26,18 @@ public class GEWindow extends JFrame {
 	ArrayList<GEGraphData> graphdata;
 	
 	private void createAndShowGUI() {
+		
 		JFrame prepFrame = new JFrame();
-		JPanel prepPanel = new JPanel();
+        prepFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		JLabel preptext = new JLabel("Grabbing Grand Exchange Data...");
 		preptext.setOpaque(true);
 		preptext.setPreferredSize(new Dimension(250, 100));
-		prepPanel.add(preptext, BorderLayout.CENTER);
-		prepFrame.add(prepPanel, BorderLayout.CENTER);
+		prepFrame.getContentPane().add(preptext, BorderLayout.CENTER);
+		preptext.setBackground(new Color(0,0,0));
+
 		prepFrame.pack();
 		prepFrame.setLocation(1920/2 - prepFrame.getSize().width/2, 1080/2 - prepFrame.getSize().height/2);
-		prepFrame.setVisible(true);
+		//prepFrame.setVisible(true);
 		
 		graphdata = new ArrayList<GEGraphData>();
         //Create and set up the window.
@@ -156,8 +158,9 @@ public class GEWindow extends JFrame {
         	grabGraph((int) allitems.get(items.getElementAt(i)));
         
         //Display the window
-        prepFrame.setVisible(false);
-        prepFrame.dispose();
+        //prepFrame.setVisible(false);
+        //prepFrame.dispose();
+        
         this.pack();
 		this.setLocation(1920/2 - this.getSize().width/2, 1080/2 - this.getSize().height/2);
         this.setVisible(true);
@@ -187,6 +190,7 @@ public class GEWindow extends JFrame {
 		// TODO Auto-generated method stub
 		javax.swing.SwingUtilities.invokeLater(new Runnable() {
 			public void run() {
+				
 				GEWindow ge = new GEWindow();
 				ge.setTitle("GE Window");
 				ge.createAndShowGUI();
@@ -247,7 +251,7 @@ class GraphPanel extends JPanel {
     	g.drawLine(LEFT - 10, BOTTOM, LEFT, BOTTOM);
     	
     	// Min and Max values
-    	String maxstr = formatPrice(gd.getMax()), minstr = formatPrice(gd.getMin()), midstr = formatPrice((gd.getMax() + gd.getMin()) / 2);
+    	String maxstr = formatPrice(max), minstr = formatPrice(min), midstr = formatPrice((max+min) / 2);
     	g.drawString(maxstr, LEFT - 12 - fm.stringWidth(maxstr), TOP + 5);
     	g.drawString(midstr, LEFT - 12 - fm.stringWidth(midstr), (TOP + BOTTOM + 10) / 2);
     	g.drawString(minstr, LEFT - 12 - fm.stringWidth(minstr), BOTTOM + 5);
@@ -301,7 +305,7 @@ class GraphPanel extends JPanel {
     }
     
     private void setScale(int tmax, int tmin) {
-    	max = tmax;
-    	min = tmin;
+    	max = tmax+(int)Math.pow(10,(""+tmax).length()-1)/2;
+    	min = tmin-(int)Math.pow(10,(""+tmin).length()-1)/2;
     }
 }
