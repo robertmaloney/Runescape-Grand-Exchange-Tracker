@@ -10,6 +10,7 @@ import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLConnection;
+import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
@@ -55,6 +56,7 @@ public class GEWindow extends JFrame {
         yellowLabel.setOpaque(true);
         yellowLabel.setBackground(new Color(248, 213, 131));
         yellowLabel.setPreferredSize(yellowLabel.getPreferredSize());
+        yellowLabel.addMouseMotionListener(yellowLabel);
  
         //Set the menu bar and add the label to the content pane.
         this.setJMenuBar(greenMenuBar);
@@ -200,15 +202,18 @@ public class GEWindow extends JFrame {
 
 }
 
-class GraphPanel extends JPanel {
+class GraphPanel extends JPanel implements MouseMotionListener {
 	private int max, min;
+	private ArrayList<Point> points;
+	private ArrayList<Integer> prices;
+	private GEGraphData data;
+	private String name;
+	private int totalPoints = 0;
+	
+	public GraphPanel() {}
 	
 	public Dimension getPreferredSize() {
         return new Dimension(500, 380);
-    }
-
-    public void paintComponent(Graphics g) {
-        super.paintComponent(g);       
     }
     
     public void displayString(String out) {
@@ -216,79 +221,94 @@ class GraphPanel extends JPanel {
     	this.getGraphics().drawString(out, 10, 20);
     }
     
-    public void displayGraph( GEGraphData gd, String itemname ) {
-    	Graphics g = this.getGraphics();
-    	super.paint(g);
-    	Font font = new Font("SansSerif", Font.BOLD, 14);
-    	g.setFont(font);
-    	FontMetrics fm = g.getFontMetrics();
-    	
-    	this.setScale(gd.getMax(), gd.getMin());
-    	
-    	final int LEFT = 63, RIGHT = 363, TOP = 30, BOTTOM = 250;
-    	// Title
-    	g.drawString(itemname, LEFT + (RIGHT - LEFT)/2 - fm.stringWidth(itemname)/2, TOP - 10);
-
-    	font = new Font("SansSerif", Font.BOLD, 12);
-    	g.setFont(font);
-    	fm = g.getFontMetrics();
-    	
-    	// Border Lines
-    	g.drawLine(LEFT, TOP, LEFT, BOTTOM);
-    	g.drawLine(LEFT, BOTTOM, RIGHT, BOTTOM);
-    	
-    	// Intervals
-    	g.drawLine(LEFT, BOTTOM, LEFT, BOTTOM + 10);
-    	g.drawLine(LEFT + (RIGHT - LEFT)/4, BOTTOM, LEFT + (RIGHT - LEFT)/4, BOTTOM + 10);
-    	g.drawLine(LEFT + (RIGHT - LEFT)/2, BOTTOM, LEFT + (RIGHT - LEFT)/2, BOTTOM + 10);
-    	g.drawLine(LEFT + 3*(RIGHT - LEFT)/4, BOTTOM, LEFT + 3*(RIGHT - LEFT)/4, BOTTOM + 10);
-    	g.drawLine(RIGHT, BOTTOM, RIGHT, BOTTOM + 10);
-
-    	g.drawLine(LEFT - 10, TOP, LEFT, TOP);
-    	g.drawLine(LEFT - 10, TOP + (BOTTOM - TOP)/4, LEFT, TOP + (BOTTOM - TOP)/4);
-    	g.drawLine(LEFT - 10, TOP + (BOTTOM - TOP)/2, LEFT, TOP + (BOTTOM - TOP)/2);
-    	g.drawLine(LEFT - 10, TOP + 3*(BOTTOM - TOP)/4, LEFT, TOP + 3*(BOTTOM - TOP)/4);
-    	g.drawLine(LEFT - 10, BOTTOM, LEFT, BOTTOM);
-    	
-    	// Min and Max values
-    	String maxstr = formatPrice(max), minstr = formatPrice(min), midstr = formatPrice((max+min) / 2);
-    	g.drawString(maxstr, LEFT - 12 - fm.stringWidth(maxstr), TOP + 5);
-    	g.drawString(midstr, LEFT - 12 - fm.stringWidth(midstr), (TOP + BOTTOM + 10) / 2);
-    	g.drawString(minstr, LEFT - 12 - fm.stringWidth(minstr), BOTTOM + 5);
-    	
-    	// Grid Lines
-    	g.setColor(new Color(125,125,125,125));
-    	g.drawLine(LEFT + (RIGHT - LEFT)/4, TOP, LEFT + (RIGHT - LEFT)/4, BOTTOM);
-    	g.drawLine(LEFT + (RIGHT - LEFT)/2, TOP, LEFT + (RIGHT - LEFT)/2, BOTTOM);
-    	g.drawLine(LEFT + 3*(RIGHT - LEFT)/4, TOP, LEFT + 3*(RIGHT - LEFT)/4, BOTTOM);
-    	
-    	g.drawLine(LEFT, TOP + (BOTTOM - TOP)/4, RIGHT, TOP + (BOTTOM - TOP)/4);
-    	g.drawLine(LEFT, TOP + (BOTTOM - TOP)/2, RIGHT, TOP + (BOTTOM - TOP)/2);
-    	g.drawLine(LEFT, TOP + 3*(BOTTOM - TOP)/4, RIGHT, TOP + 3*(BOTTOM - TOP)/4);
-    	
-    	// Set plot dimensions
-    	int samples = 30;
-    	final int OFFSET = 169 - samples - 1;
-    	
-    	// Date interval labels
-    	g.setColor(new Color(0, 0, 0));
-    	int j = 0;
-    	double i;
-    	for (i = OFFSET; i < OFFSET + samples + 1; i += samples / 4.0) {
-			String sdf = new SimpleDateFormat("MMM dd").format(new Date(gd.getDateAt((int)i)));
-			g.drawString(sdf, LEFT - fm.stringWidth(sdf)/2 + j*(RIGHT-LEFT)/4, BOTTOM + 22);
-			++j;
-    	}
-    	
-    	// Plot the curve
-    	g.setColor(new Color(54, 99, 8));
-    	for (i = OFFSET; i < OFFSET + samples; ++i) {
-    		int x0 = (int) ((i-OFFSET)/samples * (RIGHT - LEFT) + LEFT), x1 = (int) ((i - OFFSET + 1)/samples * (RIGHT - LEFT) + LEFT);
-    		int y0 = this.calcPoint(gd.getPriceAt((int)i), TOP, BOTTOM), y1 = this.calcPoint(gd.getPriceAt((int)i+1), TOP, BOTTOM);
-    		g.fillRect(x0-2, y0-2, 4, 4);
-    		g.drawLine(x0, y0, x1, y1);
-    	}
-    	g.fillRect((int) ((i-OFFSET)/samples * (RIGHT - LEFT) + LEFT)-2, this.calcPoint(gd.getPriceAt((int)i), TOP, BOTTOM)-2, 4, 4);
+    public void displayGraph(GEGraphData gd, String itemname) {
+    	data = gd; name = itemname;
+    	repaint();
+    }
+    
+    @Override
+    protected void paintComponent(Graphics g) {
+    	super.paintComponent(g);
+    	if (data != null) {
+	    	
+	    	points = new ArrayList<Point>();
+	    	prices = new ArrayList<Integer>();
+	    	
+	    	Font font = new Font("SansSerif", Font.BOLD, 14);
+	    	g.setFont(font);
+	    	FontMetrics fm = g.getFontMetrics();
+	    	
+	    	this.setScale(data.getMax(), data.getMin());
+	    	
+	    	final int LEFT = 63, RIGHT = 363, TOP = 30, BOTTOM = 250;
+	    	// Title
+	    	g.drawString(name, LEFT + (RIGHT - LEFT)/2 - fm.stringWidth(name)/2, TOP - 10);
+	
+	    	font = new Font("SansSerif", Font.BOLD, 12);
+	    	g.setFont(font);
+	    	fm = g.getFontMetrics();
+	    	
+	    	// Border Lines
+	    	g.drawLine(LEFT, TOP, LEFT, BOTTOM);
+	    	g.drawLine(LEFT, BOTTOM, RIGHT, BOTTOM);
+	    	
+	    	// Intervals
+	    	g.drawLine(LEFT, BOTTOM, LEFT, BOTTOM + 10);
+	    	g.drawLine(LEFT + (RIGHT - LEFT)/4, BOTTOM, LEFT + (RIGHT - LEFT)/4, BOTTOM + 10);
+	    	g.drawLine(LEFT + (RIGHT - LEFT)/2, BOTTOM, LEFT + (RIGHT - LEFT)/2, BOTTOM + 10);
+	    	g.drawLine(LEFT + 3*(RIGHT - LEFT)/4, BOTTOM, LEFT + 3*(RIGHT - LEFT)/4, BOTTOM + 10);
+	    	g.drawLine(RIGHT, BOTTOM, RIGHT, BOTTOM + 10);
+	
+	    	g.drawLine(LEFT - 10, TOP, LEFT, TOP);
+	    	g.drawLine(LEFT - 10, TOP + (BOTTOM - TOP)/4, LEFT, TOP + (BOTTOM - TOP)/4);
+	    	g.drawLine(LEFT - 10, TOP + (BOTTOM - TOP)/2, LEFT, TOP + (BOTTOM - TOP)/2);
+	    	g.drawLine(LEFT - 10, TOP + 3*(BOTTOM - TOP)/4, LEFT, TOP + 3*(BOTTOM - TOP)/4);
+	    	g.drawLine(LEFT - 10, BOTTOM, LEFT, BOTTOM);
+	    	
+	    	// Min and Max values
+	    	String maxstr = formatPrice(max), minstr = formatPrice(min), midstr = formatPrice((max+min) / 2);
+	    	g.drawString(maxstr, LEFT - 12 - fm.stringWidth(maxstr), TOP + 5);
+	    	g.drawString(midstr, LEFT - 12 - fm.stringWidth(midstr), (TOP + BOTTOM + 10) / 2);
+	    	g.drawString(minstr, LEFT - 12 - fm.stringWidth(minstr), BOTTOM + 5);
+	    	
+	    	// Grid Lines
+	    	g.setColor(new Color(125,125,125,125));
+	    	g.drawLine(LEFT + (RIGHT - LEFT)/4, TOP, LEFT + (RIGHT - LEFT)/4, BOTTOM);
+	    	g.drawLine(LEFT + (RIGHT - LEFT)/2, TOP, LEFT + (RIGHT - LEFT)/2, BOTTOM);
+	    	g.drawLine(LEFT + 3*(RIGHT - LEFT)/4, TOP, LEFT + 3*(RIGHT - LEFT)/4, BOTTOM);
+	    	
+	    	g.drawLine(LEFT, TOP + (BOTTOM - TOP)/4, RIGHT, TOP + (BOTTOM - TOP)/4);
+	    	g.drawLine(LEFT, TOP + (BOTTOM - TOP)/2, RIGHT, TOP + (BOTTOM - TOP)/2);
+	    	g.drawLine(LEFT, TOP + 3*(BOTTOM - TOP)/4, RIGHT, TOP + 3*(BOTTOM - TOP)/4);
+	    	
+	    	// Set plot dimensions
+	    	int samples = 30;
+	    	final int OFFSET = 169 - samples - 1;
+	    	
+	    	// Date interval labels
+	    	g.setColor(new Color(0, 0, 0));
+	    	int j = 0;
+	    	double i;
+	    	for (i = OFFSET; i < OFFSET + samples + 1; i += samples / 4.0) {
+				String sdf = new SimpleDateFormat("MMM dd").format(new Date(data.getDateAt((int)i)));
+				g.drawString(sdf, LEFT - fm.stringWidth(sdf)/2 + j*(RIGHT-LEFT)/4, BOTTOM + 22);
+				++j;
+	    	}
+	    	
+	    	// Plot the curve
+	    	g.setColor(new Color(54, 99, 8));
+	    	for (i = OFFSET; i < OFFSET + samples; ++i) {
+	    		int x0 = (int) ((i-OFFSET)/samples * (RIGHT - LEFT) + LEFT), x1 = (int) ((i - OFFSET + 1)/samples * (RIGHT - LEFT) + LEFT);
+	    		int y0 = this.calcPoint(data.getPriceAt((int)i), TOP, BOTTOM), y1 = this.calcPoint(data.getPriceAt((int)i+1), TOP, BOTTOM);
+	    		g.fillRect(x0-2, y0-2, 4, 4);
+	    		points.add(new Point(x0,y0));
+	    		prices.add(data.getPriceAt((int)i));
+	    		g.drawLine(x0, y0, x1, y1);
+	    	}
+	    	g.fillRect((int) ((i-OFFSET)/samples * (RIGHT - LEFT) + LEFT)-2, this.calcPoint(data.getPriceAt((int)i), TOP, BOTTOM)-2, 4, 4);
+    		points.add(new Point((int) ((i-OFFSET)/samples * (RIGHT - LEFT) + LEFT), this.calcPoint(data.getPriceAt((int)i), TOP, BOTTOM)));
+    		prices.add(data.getPriceAt((int)i));
+	    }
     }
     
     private String formatPrice(int price) {
@@ -308,4 +328,28 @@ class GraphPanel extends JPanel {
     	max = tmax+(int)Math.pow(10,(""+tmax).length()-1)/2;
     	min = tmin-(int)Math.pow(10,(""+tmin).length()-1)/2;
     }
+
+	@Override
+	public void mouseDragged(MouseEvent e) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void mouseMoved(MouseEvent e) {
+		// TODO Auto-generated method stubs
+		DecimalFormat fm = new DecimalFormat("#,###");
+		if (points != null) {
+			boolean found = false;
+			for (int i = 0; i < points.size(); ++i) {
+				int x = (e.getX() - points.get(i).x)*(e.getX() - points.get(i).x);
+				int y = (e.getY() - points.get(i).y)*(e.getY() - points.get(i).y);
+				if (x + y < 4) {
+					this.setToolTipText(fm.format(prices.get(i)));
+					found = true;
+				}
+			}
+			if (!found) this.setToolTipText("");
+		}
+	}
 }
