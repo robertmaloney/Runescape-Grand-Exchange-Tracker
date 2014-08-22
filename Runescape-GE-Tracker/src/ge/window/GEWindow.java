@@ -5,10 +5,7 @@ import ge.updater.*;
 import java.awt.*;
 import java.awt.event.*;
 import java.awt.image.BufferedImage;
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.InputStreamReader;
+import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLConnection;
@@ -45,7 +42,27 @@ public class GEWindow extends JFrame {
 		
 		graphdata = new ArrayList<GEGraphData>();
         //Create and set up the window.
-        this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        this.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
+        this.addWindowListener(new java.awt.event.WindowAdapter() {
+            @Override
+            public void windowClosing(WindowEvent e) {
+                if (JOptionPane.showConfirmDialog(e.getComponent(), 
+                    "Do you want to close and save?", "Close", 
+                    JOptionPane.YES_NO_OPTION,
+                    JOptionPane.QUESTION_MESSAGE) == JOptionPane.YES_OPTION){
+                	try {
+                		BufferedWriter bw = new BufferedWriter( new OutputStreamWriter( new FileOutputStream("config.txt")));
+                		GEWindow main = (GEWindow) e.getComponent();
+                		for (int i = 0; i < main.items.size(); ++i)
+                			bw.write(main.items.get(i)+"\n");
+                		bw.close();
+                	} catch (Exception ex) {
+                		
+                	}
+                    System.exit(0);
+                }
+            }
+        });
         this.setResizable(false);
  
         // Menu Bar
@@ -115,9 +132,17 @@ public class GEWindow extends JFrame {
         this.getContentPane().add(itemfinder, BorderLayout.NORTH);
         
         items = new DefaultListModel<String>();
-        items.addElement("Armadyl chaps");
-        for (int i = 0; i < 10; ++i)
-        	items.addElement(search_item.getItemAt(i+1));
+        try {
+			BufferedReader in = new BufferedReader( new InputStreamReader( new FileInputStream("config.txt") ) );
+			String save = null;
+	        while((save = in.readLine()) != null) {
+	        	items.addElement(save);
+	        	grabGraph((int) allitems.get(save));
+	        }
+	        in.close();
+        } catch (Exception e) {
+        	// Done
+        }
         
         itemlist = new JList<String>( items );
         JScrollPane itemscroll = new JScrollPane(itemlist);
@@ -149,10 +174,9 @@ public class GEWindow extends JFrame {
 				// TODO Auto-generated method stub
 				int index = itemlist.getSelectedIndex();
 				if (index > -1) {
+					yellowLabel.clearGraph();
 					items.removeElementAt(index);
 					graphdata.remove(graphdata.get(index));
-					//itemlist.updateUI();
-					System.out.println("ItemList Size: " + graphdata.size());
 				}
 			}
         	
@@ -165,12 +189,6 @@ public class GEWindow extends JFrame {
         split.setDividerSize(0);
         split.setDividerLocation(200);
         this.getContentPane().add(split);
-        
-        // Grab graph data for current items
-        for (int i = 0; i < items.size(); ++i) {
-        	grabGraph((int) allitems.get(items.getElementAt(i)));
-        	grabIcon((int) allitems.get(items.getElementAt(i)));
-        }
         
         //Display the window
         //prepFrame.setVisible(false);
@@ -248,6 +266,11 @@ class GraphPanel extends JPanel implements MouseMotionListener {
     	repaint();
     }
     
+    public void clearGraph() {
+    	data = null;
+    	repaint();
+    }
+    
     @Override
     protected void paintComponent(Graphics g) {
     	super.paintComponent(g);
@@ -272,7 +295,7 @@ class GraphPanel extends JPanel implements MouseMotionListener {
 	    	final int LEFT = 63, RIGHT = 363, TOP = 75, BOTTOM = 295;
 	    	// Title and Icon
 	    	try {
-	    		BufferedImage img = ImageIO.read( new File("itembackground0.jpg"));
+	    		BufferedImage img;// = ImageIO.read( new File("itembackground0.jpg"));
 	    		//g.drawImage(img, 5, 5, 60, 60, null);
 	    		img = ImageIO.read( new URL ("http://services.runescape.com/m=itemdb_rs/4555_obj_big.gif?id="+id));
 	    		g.drawImage(img, 10, 10, 50, 50, null);
