@@ -4,7 +4,9 @@ import ge.updater.*;
 
 import java.awt.*;
 import java.awt.event.*;
+import java.awt.image.BufferedImage;
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
@@ -14,6 +16,7 @@ import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
+import javax.imageio.ImageIO;
 import javax.swing.*;
 import javax.swing.event.*;
 
@@ -80,7 +83,15 @@ public class GEWindow extends JFrame {
         }
         allitems = new JsonObject(jstring);
         Iterator<String> keys = allitems.keySet().iterator();
-        while (keys.hasNext()) search_item.addItem(keys.next());
+        int maxlength = 0;
+        while (keys.hasNext()) {
+        	String key = keys.next();
+        	search_item.addItem(key);
+        	if (key.length() > maxlength)
+        		maxlength = key.length();
+        }
+        int scrollpanelwidth = 7*maxlength;
+        System.out.println("Divider to be at " + scrollpanelwidth);
         
         JButton addbutton = new JButton("Add");
         addbutton.addActionListener(new ActionListener() {
@@ -124,7 +135,7 @@ public class GEWindow extends JFrame {
 						output += "Date: " + sdf + ", Price: " + d.getPriceAt(i) + "\n";
 					}
 					*/
-					yellowLabel.displayGraph(d, itemlist.getSelectedValue());
+					yellowLabel.displayGraph(d, itemlist.getSelectedValue(), (int) allitems.get(itemlist.getSelectedValue()));
 				}
 			}
         	
@@ -152,12 +163,14 @@ public class GEWindow extends JFrame {
         items_n_options.setDividerLocation(340);
         JSplitPane split = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, items_n_options, yellowLabel);
         split.setDividerSize(0);
-        split.setDividerLocation(225);
+        split.setDividerLocation(200);
         this.getContentPane().add(split);
         
         // Grab graph data for current items
-        for (int i = 0; i < items.size(); ++i)
+        for (int i = 0; i < items.size(); ++i) {
         	grabGraph((int) allitems.get(items.getElementAt(i)));
+        	grabIcon((int) allitems.get(items.getElementAt(i)));
+        }
         
         //Display the window
         //prepFrame.setVisible(false);
@@ -167,6 +180,15 @@ public class GEWindow extends JFrame {
 		this.setLocation(1920/2 - this.getSize().width/2, 1080/2 - this.getSize().height/2);
         this.setVisible(true);
     }
+	
+	private void grabIcon(int id) {
+		try {
+			BufferedImage img = ImageIO.read( new URL ("http://services.runescape.com/m=itemdb_rs/4555_obj_big.gif?id="+id));
+			//ImageIO.write(img, "png", new File(id+".png"));
+		} catch (Exception e) {
+			
+		}
+	}
 	
 	private void grabGraph(int itemid) {
 		//System.out.println(itemid);
@@ -208,7 +230,7 @@ class GraphPanel extends JPanel implements MouseMotionListener {
 	private ArrayList<Integer> prices;
 	private GEGraphData data;
 	private String name;
-	private int totalPoints = 0;
+	private int id;
 	
 	public GraphPanel() {}
 	
@@ -221,14 +243,21 @@ class GraphPanel extends JPanel implements MouseMotionListener {
     	this.getGraphics().drawString(out, 10, 20);
     }
     
-    public void displayGraph(GEGraphData gd, String itemname) {
-    	data = gd; name = itemname;
+    public void displayGraph(GEGraphData gd, String itemname, int itemid) {
+    	data = gd; name = itemname; id = itemid;
     	repaint();
     }
     
     @Override
     protected void paintComponent(Graphics g) {
     	super.paintComponent(g);
+
+    	try {
+    		BufferedImage img = ImageIO.read(new File("background0.jpg"));
+        	g.drawImage(img, 0, 0, this.getWidth(), this.getHeight(), null);
+    	} catch (Exception e) {
+    		
+    	}
     	if (data != null) {
 	    	
 	    	points = new ArrayList<Point>();
@@ -237,12 +266,20 @@ class GraphPanel extends JPanel implements MouseMotionListener {
 	    	Font font = new Font("SansSerif", Font.BOLD, 14);
 	    	g.setFont(font);
 	    	FontMetrics fm = g.getFontMetrics();
-	    	
+	    	g.setColor(Color.LIGHT_GRAY);
 	    	this.setScale(data.getMax(), data.getMin());
 	    	
-	    	final int LEFT = 63, RIGHT = 363, TOP = 30, BOTTOM = 250;
-	    	// Title
-	    	g.drawString(name, LEFT + (RIGHT - LEFT)/2 - fm.stringWidth(name)/2, TOP - 10);
+	    	final int LEFT = 63, RIGHT = 363, TOP = 75, BOTTOM = 295;
+	    	// Title and Icon
+	    	try {
+	    		BufferedImage img = ImageIO.read( new File("itembackground0.jpg"));
+	    		//g.drawImage(img, 5, 5, 60, 60, null);
+	    		img = ImageIO.read( new URL ("http://services.runescape.com/m=itemdb_rs/4555_obj_big.gif?id="+id));
+	    		g.drawImage(img, 10, 10, 50, 50, null);
+	    	} catch (Exception e) {
+	    		
+	    	}
+	    	g.drawString(name, 5 + 50 + 5, 5 + 32 + 3);
 	
 	    	font = new Font("SansSerif", Font.BOLD, 12);
 	    	g.setFont(font);
@@ -286,7 +323,7 @@ class GraphPanel extends JPanel implements MouseMotionListener {
 	    	final int OFFSET = 169 - samples - 1;
 	    	
 	    	// Date interval labels
-	    	g.setColor(new Color(0, 0, 0));
+	    	g.setColor(Color.LIGHT_GRAY);
 	    	int j = 0;
 	    	double i;
 	    	for (i = OFFSET; i < OFFSET + samples + 1; i += samples / 4.0) {
