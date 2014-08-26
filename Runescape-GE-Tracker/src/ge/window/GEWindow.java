@@ -6,7 +6,6 @@ import java.awt.*;
 import java.awt.event.*;
 import java.awt.image.BufferedImage;
 import java.io.*;
-import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLConnection;
 import java.text.DecimalFormat;
@@ -47,7 +46,7 @@ public class GEWindow extends JFrame {
             @Override
             public void windowClosing(WindowEvent e) {
                 if (JOptionPane.showConfirmDialog(e.getComponent(), 
-                    "Do you want to close and save?", "Close", 
+                    "Do you want to save the current list of items?", "Save?", 
                     JOptionPane.YES_NO_OPTION,
                     JOptionPane.QUESTION_MESSAGE) == JOptionPane.YES_OPTION){
                 	try {
@@ -59,8 +58,8 @@ public class GEWindow extends JFrame {
                 	} catch (Exception ex) {
                 		
                 	}
-                    System.exit(0);
                 }
+                System.exit(0);
             }
         });
         this.setResizable(false);
@@ -79,7 +78,7 @@ public class GEWindow extends JFrame {
         yellowLabel.addMouseMotionListener(yellowLabel);
  
         //Set the menu bar and add the label to the content pane.
-        this.setJMenuBar(greenMenuBar);
+        //this.setJMenuBar(greenMenuBar);
         //frame.getContentPane().add(yellowLabel, BorderLayout.CENTER);
  
         JPanel itemfinder = new JPanel();
@@ -100,15 +99,10 @@ public class GEWindow extends JFrame {
         }
         allitems = new JsonObject(jstring);
         Iterator<String> keys = allitems.keySet().iterator();
-        int maxlength = 0;
         while (keys.hasNext()) {
         	String key = keys.next();
         	search_item.addItem(key);
-        	if (key.length() > maxlength)
-        		maxlength = key.length();
         }
-        int scrollpanelwidth = 7*maxlength;
-        System.out.println("Divider to be at " + scrollpanelwidth);
         
         JButton addbutton = new JButton("Add");
         addbutton.addActionListener(new ActionListener() {
@@ -145,7 +139,27 @@ public class GEWindow extends JFrame {
         }
         
         itemlist = new JList<String>( items );
+        itemlist.setOpaque(false);
+        itemlist.setBackground(new Color(0,0,0,0));
+        JPanel scrollframe = new JPanel() {
+        	@Override
+        	public void paintComponent(Graphics g) {
+        		try {
+            		BufferedImage img = ImageIO.read(new File("scrollback0.png"));
+                	g.drawImage(img, -8, -13, this.getWidth()+16, this.getHeight()+26, null);
+            	} catch (Exception e) {
+            		
+            	}
+        	}
+        };
+        scrollframe.setLayout(null);
         JScrollPane itemscroll = new JScrollPane(itemlist);
+        itemscroll.setBorder(null);
+        itemscroll.setOpaque(false);
+        itemscroll.getViewport().setOpaque(false);
+        itemscroll.setBounds(13, 45, 170, 250);
+        scrollframe.add(itemscroll);
+        
         itemlist.addListSelectionListener(new ListSelectionListener() {
 
 			@Override
@@ -182,7 +196,7 @@ public class GEWindow extends JFrame {
         	
         });
         itemoptions.add(removeitem);
-        JSplitPane items_n_options = new JSplitPane(JSplitPane.VERTICAL_SPLIT, itemscroll, itemoptions);
+        JSplitPane items_n_options = new JSplitPane(JSplitPane.VERTICAL_SPLIT, scrollframe, itemoptions);
         items_n_options.setDividerSize(0);
         items_n_options.setDividerLocation(340);
         JSplitPane split = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, items_n_options, yellowLabel);
